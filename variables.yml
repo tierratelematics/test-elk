@@ -1,0 +1,9 @@
+cluster_name: test-elk
+es_ip_node_1: 192.168.210.175
+es_ip_node_2: 192.168.210.176
+ad_group_enable_to_use_head: elasticsearch-admin
+
+# Setup with real active directory
+ldap_ip_address: 192.168.x.x
+ldap_user: <username>@<domain>
+ldap_password: password

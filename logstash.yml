@@ -1,0 +1,49 @@
+- hosts: es03
+  become: yes
+  handlers:
+    - name: reload logstash
+      docker_container:
+        name: logstash
+        state: started
+        restart: yes
+
+  pre_tasks:
+    - name: Set variable for environment
+      include_vars: variables.yml
+      tags: always
+    - name: Upgrade RedHat
+      yum: name='@^Infrastructure Server' state=present
+  roles:
+    - { role: ansible-role-docker,
+        tags: docker
+      }
+  tasks:
+    - yum: name=docker-python state=present
+
+    - file: path=/opt/logstash/pipeline state=directory
+
+    - template: src={{ item }}.j2 dest=/opt/logstash/pipeline/{{ item }}
+      with_items:
+        - logstash-docker.conf
+        - logstash-elasticsearch.conf
+        - logstash-log4j.conf
+        - logstash-syslog.conf
+      notify: reload logstash
+
+    - template: src=logstash.yml.j2 dest=/opt/logstash/logstash.yml
+      notify: reload logstash
+
+    - name: Create a data container
+      docker_container:
+        name: logstash
+        image: docker.elastic.co/logstash/logstash:5.4.0
+        volumes:
+          - /opt/logstash/pipeline/:/usr/share/logstash/pipeline/
+          - /opt/logstash/logstash.yml:/usr/share/logstash/config/logstash.yml
+        ports:
+          - 5001:5001/udp
+          - 5044:5044
+          - 5555:5555
+          - 5002:5002
+          - 5000:5000
+        restart_policy: always

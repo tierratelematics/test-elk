@@ -1,0 +1,8 @@
+output {
+      elasticsearch {
+        hosts => ["{{ es_ip_node_1 }}:9200"]
+        #user => logstash_internal
+        #password => changeme
+      }
+      #stdout { codec => rubydebug }
+    }

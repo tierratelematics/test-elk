@@ -1,0 +1,33 @@
+worker_processes  1;
+
+events {
+    worker_connections  1024;
+}
+
+http {
+
+    ldap_server ldapserver {
+        url ldap://{{ ldap_ip_address }}:389/OU=Users,OU=Leini,DC=toptierra,DC=it?samaccountname?sub?(&(memberOf:1.2.840.113556.1.4.1941:=CN={{ ad_group_enable_to_use_head }},OU=Groups,OU=Leini,DC=toptierra,DC=it)(objectClass=user));
+        binddn {{ ldap_user }};
+        binddn_passwd {{ ldap_password }}
+        group_attribute uniquemember;
+        group_attribute_is_dn on;
+    }
+
+    server {
+      listen                *:80 ;
+
+      server_name           server;
+      access_log            /var/log/nginx/kibana.srv-log-dev.log;
+      error_log            /var/log/nginx/kibana.srv-log-dev.error.log;
+
+      location / {
+        proxy_pass http://elasticsearch-head:9100;
+        proxy_set_header Host $host;
+        proxy_set_header  X-Forwarded-For $proxy_add_x_forwarded_for;
+        auth_ldap "Enter Active Directory credentials";
+        auth_ldap_servers ldapserver;
+      }
+    }
+
+}

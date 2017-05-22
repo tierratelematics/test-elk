@@ -1,0 +1,55 @@
+- hosts: es03
+  become: yes
+  handlers:
+    - name: reload kibana
+      docker_container:
+        name: kibana
+        state: started
+        restart: yes
+
+    - name: reload nginx
+      docker_container:
+        name: nginx-kibana
+        state: started
+        restart: yes
+
+  pre_tasks:
+    - name: Set variable for environment
+      include_vars: variables.yml
+      tags: always
+    - name: Upgrade RedHat
+      yum: name='@^Infrastructure Server' state=present
+  roles:
+    - { role: ansible-role-docker,
+        tags: docker
+      }
+  tasks:
+    - yum: name=docker-python state=present
+
+    - file: path=/opt/kibana state=directory
+
+    - template: src=kibana.yml.j2 dest=/opt/kibana/kibana.yml
+      notify: reload kibana
+
+    - template: src=kibana_nginx.conf.j2 dest=/opt/kibana/nginx.conf
+      notify: reload nginx
+
+    - name: Create a data container
+      docker_container:
+        name: kibana
+        image: docker.elastic.co/kibana/kibana:5.4.0
+        volumes:
+          - /opt/kibana/kibana.yml:/usr/share/kibana/config/kibana.yml
+        restart_policy: always
+
+    - name: Create a proxy container
+      docker_container:
+        name: nginx-kibana
+        image: h3nrik/nginx-ldap
+        links:
+          - "kibana:kibana"
+        volumes:
+          - /opt/kibana/nginx.conf:/nginx.conf:ro
+        ports:
+          - 80:80
+        restart_policy: always
