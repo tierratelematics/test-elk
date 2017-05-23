@@ -9,14 +9,9 @@
       tags: always
     - name: Upgrade RedHat
       yum: name='@^Infrastructure Server' state=present
-  roles:
-    - { role: ansible-oracle-java,
-        java_version: 8,
-        java_subversion: 92,
-        java_set_javahome: true,
-        tags: java
-      }
   tasks:
+    - yum: name=java-1.8.0-openjdk state=present
+
     - block:
         - name: Set ulimit
           lineinfile: dest=/etc/security/limits.conf regexp="^(.*)soft(.*)nofile(.*)$" line="*   soft   nofile    64000"
