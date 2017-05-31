@@ -1,6 +1,8 @@
 - hosts: es01, es02
   become: yes
   handlers:
+    - name: reload systemctl
+      shell: systemctl daemon-reload
     - name: reload elasticsearch
       systemd: name=elasticsearch state=restarted
   pre_tasks:
@@ -18,10 +20,7 @@
 
         - name: Set ulimit
           lineinfile: dest=/etc/security/limits.conf regexp="^(.*)hard(.*)nofile(.*)$" line="*   hard   nofile    64000"
-
-        - name: Set HEAP SIZE
-          lineinfile: dest=/etc/environment regexp="^ES_HEAP_SIZE" line='ES_HEAP_SIZE="1024m"'
-      tags: install
+      tags: ulimit
 
     - name: Check if elasticsearch is installed
       yum: list=elasticsearch
@@ -33,9 +32,24 @@
       - systemd: name=elasticsearch state=started enabled=yes
       - wait_for: port=9200 delay=20
       - command: /usr/share/elasticsearch/bin/elasticsearch-plugin install x-pack
+      - command: /usr/share/elasticsearch/bin/elasticsearch-plugin install repository-s3
       when: yum_check.results.0 is not defined
 
-    - template: src=elasticsearch.yml.j2 dest=/etc/elasticsearch/elasticsearch.yml
+    - lineinfile: dest=/usr/lib/systemd/system/elasticsearch.service insertafter="^#LimitMEMLOCK" regexp="^LimitMEMLOCK" line="LimitMEMLOCK=infinity"
+      notify: reload systemctl
+
+    - lineinfile: dest=/etc/sysconfig/elasticsearch insertafter="^#JAVA_HOME" regexp="^JAVA_HOME" line="JAVA_HOME={{ java_home }}"
+      notify: reload elasticsearch
+
+    - lineinfile: dest=/etc/sysconfig/elasticsearch insertafter="^#MAX_LOCKED_MEMORY" regexp="^MAX_LOCKED_MEMORY" line="MAX_LOCKED_MEMORY=unlimited"
+      notify: reload elasticsearch
+
+    - name: Config Elasticsearch
+      template: src=elasticsearch.yml.j2 dest=/etc/elasticsearch/elasticsearch.yml
+      notify: reload elasticsearch
+
+    - name: Set HEAP SIZE
+      template: src=jvm.options.j2 dest=/etc/elasticsearch/jvm.options
       notify: reload elasticsearch
 
     - script: files/elasticsearch_config.sh
