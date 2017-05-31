@@ -26,6 +26,8 @@
   tasks:
     - yum: name=docker-python state=present
 
+    - systemd: name=docker state=started enabled=yes
+
     - file: path=/opt/kibana state=directory
 
     - template: src=kibana.yml.j2 dest=/opt/kibana/kibana.yml
