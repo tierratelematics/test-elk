@@ -27,9 +27,7 @@ Go in root folder and execute
 
 > vagran up
 
-Unfortunately ath the moment I am not able to assign private static IP with
-hyper-v then you have to use a virtual switch bridged on a network with DHCP
-and substitute IP in variables.yml after you have obtained them.
+Please use a virtual switch internal called "Vagrant".
 
 Now you can launch:
 
